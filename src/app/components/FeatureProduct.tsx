@@ -1,101 +1,78 @@
 'use client';
 
+import { client } from "@/sanity/lib/client";
+import { urlFor } from "@/sanity/lib/image";
+import { allProducts, four } from "@/sanity/lib/queries";
+import { Product } from '@/../types/products';
 import Image from 'next/image';
 import { HeartIcon, ShoppingCartIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { addToCard } from "../actions/actions";
+import Swal from "sweetalert2";
 
-function FeaturedProducts() {
-  const products = [
-    {
-      id: 1,
-      img: "/images/chair.png",
-      name: "Chair 01",
-      code: "S612345",
-      price: "$50.00",
-    },
-    {
-      id: 2,
-      img: "/images/chair2.png",
-      name: "Chair 02",
-      code: "S742136",
-      price: "$40.00",
-    },
-    {
-      id: 3,
-      img: "/images/chair3.png",
-      name: "Chair 03",
-      code: "S232014",
-      price: "$75.00",
-    },
-    {
-      id: 4,
-      img: "/images/chair4.png",
-      name: "Chair 04",
-      code: "S23167",
-      price: "$30.00",
-    },
-  ];
+const FeaturedProducts = () => {
+
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      const fetchedProducts : Product[] = await client.fetch(allProducts);
+      setProducts(fetchedProducts);
+    }
+    fetchProducts();
+  },[]);
+
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault()
+    Swal.fire({
+      position: "top-right",
+      icon : "success",
+      title: `${product.name} added to cart`,
+      showConfirmButton: false,
+      timer : 1000
+    })
+    addToCard(product)
+    
+  }
 
   return (
-    <div className="w-full bg-white py-20">
-      {/* Heading */}
-      <h2 className="text-black text-4xl text-center mb-16 font-bold">Featured Products</h2>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+    <h1 className="text-2x1 font-bold mb-6 text-center">Our Products</h1>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
 
-      {/* Product Grid */}
-      <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
-        {products.map((product) => (
-          <div key={product.id} className="relative group">
-            {/* Product Image with Icons */}
-            <div className="w-full bg-gray-200 flex justify-center items-center relative overflow-hidden h-[400px]">
-              {/* Product Image */}
-              <Image
-                src={product.img}
-                width={200}
-                height={250}
-                alt={product.name}
-                className="object-cover w-[200px] h-[250px] transition-all duration-300 group-hover:scale-105"
-              />
-
-              {/* Icons (Wishlist, View Details, and Zoom) */}
-              <div className="absolute top-2 right-2 space-y-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                {/* Wishlist Icon */}
-                <button className="bg-white p-2 rounded-full">
-                  <HeartIcon className="w-6 h-6 text-gray-700" />
-                </button>
-                {/* Magnifying Glass Icon */}
-                <button className="bg-white p-2 rounded-full">
-                  <MagnifyingGlassIcon className="w-6 h-6 text-gray-700" />
-                </button>
-                {/* Cart Icon */}
-                <button className="bg-white p-2 rounded-full">
-                  <ShoppingCartIcon className="w-6 h-6 text-gray-700" />
-                </button>
-              </div>
-
-              {/* Add to Cart Button */}
-              <div className="absolute bottom-0 w-full text-white text-center py-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button className="w-full py-2 text-sm bg-[#08D15F] rounded-none hover:bg-green-700 transition-colors">
-                  View Details
-                </button>
-              </div>
-            </div>
-
-            {/* Product Details */}
-            <div className="text-center mt-4">
-              <h3 className="text-lg font-semibold text-red-500">{product.name}</h3>
-              <div className="flex justify-center items-center gap-1 mt-1">
-                <span className="text-[#05E6B7] text-4xl">-</span>
-                <span className="text-[#F701A8] text-4xl">-</span>
-                <span className="text-[#00009D] text-4xl">-</span>
-              </div>
-              <p className="mt-2 text-sm text-gray-600">Code - {product.code}</p>
-              <p className="mt-1 text-dark-blue-900">{product.price}</p>
-
-            </div>
-          </div>
-        ))}
+    {products.map((product) => (
+      <div
+       key={product._id}
+      className="border rounded-lg shadow-md p-4 hover:shadow-lg transition duration-200">
+        <Link href={`/product/${product._id}`}>
+        {product.image && (
+          <Image
+          src={urlFor(product.image).url()}
+          alt={product.name}
+          width={200}
+          height={200}
+          className="w-full h-48 object-cover rounded-md"
+          />
+        )}
+        <h2 className="text-lg font-semibold mt-4">{product.name}</h2>
+        <p className="text-gray-500 mt-2">
+          {product.price ? `$${product.price}` : "Price not available"}
+        </p>
+        <button
+        className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg 
+        hover:scale-110 transition-transform duration-300 ease-in-out
+        "
+        onClick={(e) => handleAddToCart(e, product)}
+        >
+          Add To Cart
+        </button>
+        </Link>
       </div>
+    ) )}
     </div>
+  </div>
   );
-}
+};
 
 export default FeaturedProducts;

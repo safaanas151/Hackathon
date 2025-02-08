@@ -1,198 +1,148 @@
-'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { Product } from "../../../types/products";
+import { getCartItems, removeFromCart, updateCartQuatity } from "@/app/actions/actions";
 import Image from "next/image";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import Swal from "sweetalert2";
+import { urlFor } from "@/sanity/lib/image";
+import { useRouter } from "next/navigation";
 
-// Define types for Cart Item
-type CartItem = {
-  id: number;
-  name: string;
-  price: number;
-  quantity: number;
-  color: string;
-  size: string;
-  image: string;
-};
+const CartPage = () => {
+  const [cartItems, setCartItems] = useState<Product[]>([]);
 
-// Mock cartproducts data
-const initialCartProducts: CartItem[] = [
-  {
-    id: 1,
-    name: "Ut diam",
-    price: 30,
-    quantity: 2,
-    color: "Red",
-    size: "M",
-    image: "/images/cart1.png",
-  },
-  {
-    id: 2,
-    name: "faucibus posuere",
-    price: 45,
-    quantity: 1,
-    color: "Blue",
-    size: "L",
-    image: "/images/cart2.png",
-  },
-  {
-    id: 3,
-    name: "Ac vitae vestibulum",
-    price: 60,
-    quantity: 1,
-    color: "Green",
-    size: "S",
-    image: "/images/cart3.png",
-  },
-  {
-    id: 4,
-    name: "Elit massa dia",
-    price: 50,
-    quantity: 2,
-    color: "Yellow",
-    size: "M",
-    image: "/images/cart4.png",
-  },
-  {
-    id: 5,
-    name: "Proin pharetra",
-    price: 35,
-    quantity: 3,
-    color: "Black",
-    size: "L",
-    image: "/images/cart5.png",
-  },
+  useEffect(() => {
+    setCartItems(getCartItems());
+  }, []);
 
-];
-
-const Cart = () => {
-  const [cartItems, setCartItems] = useState<CartItem[]>(initialCartProducts);
-
-  const updateQuantity = (id: number, newQuantity: number) => {
-    setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === id
-          ? { ...item, quantity: newQuantity > 0 ? newQuantity : 1 }
-          : item
-      )
-    );
+  const handleRemove = (id: string) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You will not be able to recover this item!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, remove it!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        removeFromCart(id);
+        setCartItems(getCartItems());
+        Swal.fire("Removed!", "Item has been removed.", "success");
+      }
+    });
   };
 
-  const calculateTotal = () => {
+  const handleQuantityChange = (id: string, quantity: number) => {
+    updateCartQuatity(id, quantity);
+    setCartItems(getCartItems());
+  };
+
+  const handleIncrement = (id: string) => {
+    const product = cartItems.find((item) => item._id === id);
+    if (product) handleQuantityChange(id, product.stockLevel + 1);
+  };
+
+  const handleDecrement = (id: string) => {
+    const product = cartItems.find((item) => item._id === id);
+    if (product && product.stockLevel > 1)
+      handleQuantityChange(id, product.stockLevel - 1);
+  };
+
+  const calculatedTotal = () => {
     return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
+      (total, item) => total + item.price * item.stockLevel,
       0
     );
   };
-
-  const clearCart = () => {
-    setCartItems([]);
-  };
-
-  const resetCart = () => {
-    setCartItems(initialCartProducts);
+const router = useRouter();
+  const handledProceed = () => {
+    Swal.fire({
+      title: "Proceed to Checkout?",
+      text: "Please review your cart before checkout",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, proceed!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire("Success", "Your order has been successfully processed", "success");
+        router.push("/checkout")
+        setCartItems([]);
+      }
+    });
   };
 
   return (
-    <>
-      <Header />
-      <div className="p-6 lg:p-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Cart Items */}
-        <div className="lg:col-span-2">
-          <h2 className="text-2xl font-bold mb-6 text-[#1D3178]">Your Cart</h2>
-          {cartItems.length > 0 ? (
-            <div className="space-y-6">
-              {cartItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between bg-white p-4 rounded-lg shadow-md"
-                >
-                  <div className="flex items-center space-x-4">
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      width={80}
-                      height={80}
-                      className="w-20 h-20 rounded-lg object-cover"
-                    />
-                    <div>
-                      <p className="font-semibold text-[#1D3178]">{item.name}</p>
-                      <p className="text-sm text-gray-500">
-                        Color: {item.color}, Size: {item.size}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-6">
-                    <p className="text-[#1D3178]">${item.price.toFixed(2)}</p>
-                    <input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateQuantity(item.id, Number(e.target.value))
-                      }
-                      className="w-12 px-2 py-1 border rounded-md text-center"
-                      min="1"
-                    />
-                    <p className="font-bold text-[#1D3178]">
-                      ${(item.price * item.quantity).toFixed(2)}
-                    </p>
-                  </div>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Your Cart</h1>
+      
+      {/* Cart Items */}
+      <div className="space-y-4">
+        {cartItems.length === 0 ? (
+          <p className="text-center text-gray-500">Your cart is empty.</p>
+        ) : (
+          cartItems.map((item) => (
+            <div key={item._id} className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center space-x-4">
+               {item.image && (
+                <Image
+                src={urlFor(item.image).url()}
+                className="w-16 h-16 object-cover rounded-lg"
+                alt="image"
+                width={500}
+                height={500}
+                />
+               )}
+                
+                <div className="flex-1 ml-4">
+                  <h2 className="text-lg font-semibold">{item.name}</h2>
+                  <p className="text-sm text-gray-500">Price: ${typeof item.price === 'number' ? item.price.toFixed(2) : 'N/A'}</p>
                 </div>
-              ))}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleDecrement(item._id)}
+                  className="bg-gray-300 p-2 rounded"
+                >
+                  -
+                </button>
+                <span className="text-lg">{item.stockLevel}</span>
+                <button
+                  onClick={() => handleIncrement(item._id)}
+                  className="bg-gray-300 p-2 rounded"
+                >
+                  +
+                </button>
+                <button
+                  onClick={() => handleRemove(item._id)}
+                  className="text-red-500 p-2"
+                >
+                  Remove
+                </button>
+              </div>
             </div>
-          ) : (
-            <p className="text-[#1D3178] text-center mt-6">
-              Your cart is empty. Add some products!
-            </p>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex justify-between mt-6">
-            <button
-              onClick={resetCart}
-              className="px-4 py-2 bg-[#FB2E86] text-white rounded-md text-sm hover:bg-pink-600"
-            >
-              Update Cart
-            </button>
-            <button
-              onClick={clearCart}
-              className="px-4 py-2 bg-[#FB2E86] text-white rounded-md text-sm hover:bg-pink-600"
-            >
-              Clear Cart
-            </button>
-          </div>
-        </div>
-
-        {/* Cart Totals */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold mb-4 text-[#1D3178]">Cart Totals</h2>
-          <p className="flex justify-between text-[#1D3178]">
-            <span>Subtotal:</span> <span>${calculateTotal().toFixed(2)}</span>
-          </p>
-          <p className="flex justify-between mb-4 text-[#1D3178]">
-            <span>Shipping:</span> <span>$15.00</span>
-          </p>
-          <p className="flex justify-between font-bold text-lg text-[#1D3178]">
-            <span>Total:</span>{" "}
-            <span>${(calculateTotal() + 15).toFixed(2)}</span>
-          </p>
-          <li>
-                <Link href="/checkout">
-            <button
-              type="submit"
-              className="w-full py-3 bg-[#FB2E86] text-white rounded-md font-semibold hover:bg-pink-600"
-            >
-              Proceed To Checkout
-            </button>
-            </Link>
-            </li>
-        </div>
+          ))
+        )}
       </div>
-      <Footer />
-    </>
+
+      {/* Cart Summary */}
+      <div className="mt-6 flex justify-between items-center border-t pt-4">
+        <div className="text-lg font-semibold">
+          <p>Total: ${calculatedTotal().toFixed(2)}</p>
+        </div>
+        <button
+          onClick={handledProceed}
+          className="bg-blue-500 text-white py-2 px-4 rounded"
+        >
+          Proceed to Checkout
+        </button>
+      </div>
+    </div>
   );
 };
 
-export default Cart;
+export default CartPage;
